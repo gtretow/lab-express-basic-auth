@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const passport = require("passport");
 
 const User = require("../models/User.model");
 
@@ -61,3 +62,30 @@ router.post("/signup", async (req, res) => {
     }
   }
 });
+// Next é uma função que passa algum valor para o próximo handler de rotas (do Express) da cadeia de handlers
+
+router.post("/login", (req, res, next) => {
+  passport.authenticate("local", (err, user, info) => {
+    // O objeto err só existe em caso de erro na comunicação com o Mongo
+    if (err) {
+      return res.status(500).json({ msg: err });
+    }
+
+    // Caso este email não esteja cadastrado ou a senha esteja divergente
+    if (!user || info) {
+      return res.status(401).json({ msg: info.message });
+    }
+
+    req.login(user, { session: false }, (err) => {
+      if (err) {
+        console.error(err);
+        return next(err);
+      }
+
+      const { name, email } = user;
+      return res.status(200).json({ name, email });
+    });
+  })(req, res, next);
+});
+
+module.exports = router;
